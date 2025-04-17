@@ -12,7 +12,7 @@ TRAINING_CONFIG = {
 
 # Object Detection Models Configurations
 YOLO_CONFIG = {
-    'model_name': 'yolov7',
+    'model_name': 'yolov8n.pt',
     'pretrained': True,
     'confidence_threshold': 0.5,
     'nms_threshold': 0.45,
@@ -57,7 +57,7 @@ RESNET_CONFIG = {
 EFFICIENTNET_CONFIG = {
     'model_name': 'efficientnet_b0',
     'pretrained': True,
-    'num_classes': 3,
+    'num_classes': 3,  # Match the number of classes in the checkpoint
 }
 
 VIT_CONFIG = {
@@ -68,7 +68,7 @@ VIT_CONFIG = {
 
 # Sequence Models Configurations
 LSTM_CONFIG = {
-    'input_size': 2048,  # Feature vector size from CNN backbone
+    'input_size': 512,  # Feature vector size from ResNet18
     'hidden_size': 512,
     'num_layers': 2,
     'dropout': 0.5,
@@ -77,7 +77,7 @@ LSTM_CONFIG = {
 }
 
 GRU_CONFIG = {
-    'input_size': 2048,
+    'input_size': 512,  # Updated to match ResNet18
     'hidden_size': 512,
     'num_layers': 2,
     'dropout': 0.5,

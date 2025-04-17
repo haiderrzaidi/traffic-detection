@@ -5,7 +5,7 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from typing import Dict, List, Tuple
 
 from .base_model import BaseModel
-from ..configs.model_config import FASTER_RCNN_CONFIG
+from configs.model_config import FASTER_RCNN_CONFIG
 
 class FasterRCNNModel(BaseModel):
     """Faster R-CNN model for traffic incident detection."""

@@ -54,19 +54,22 @@ class ResNetModel(BaseModel):
         x = x.view(batch_size * num_frames, channels, height, width)
         
         # Extract features for each frame
-        features = self.features(x)
+        features = self.features(x)  # Shape: (batch_size * num_frames, 2048, 1, 1)
         
-        # Reshape back to (batch_size, num_frames, features)
-        features = features.view(batch_size, num_frames, -1)
+        # Reshape features to (batch_size, num_frames, 2048)
+        features = features.view(batch_size, num_frames, 2048)
         
-        # Add temporal dimension for pooling
-        features = features.unsqueeze(2)  # (batch_size, num_frames, 1, features)
+        # Add spatial dimensions for 3D pooling
+        features = features.unsqueeze(3).unsqueeze(4)  # Shape: (batch_size, num_frames, 2048, 1, 1)
+        
+        # Permute to (batch_size, 2048, num_frames, 1, 1) for temporal pooling
+        features = features.permute(0, 2, 1, 3, 4)
         
         # Apply temporal pooling
-        pooled = self.temporal_pool(features)
+        pooled = self.temporal_pool(features)  # Shape: (batch_size, 2048, 1, 1, 1)
         
         # Flatten and classify
-        pooled = pooled.view(batch_size, -1)
+        pooled = pooled.view(batch_size, 2048)
         output = self.classifier(pooled)
         
         return output

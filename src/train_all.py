@@ -10,21 +10,64 @@ from tqdm import tqdm
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.data.nexar_dataset import NexarDataModule
-from src.models.yolo.yolo_model import YOLOModel
-from src.models.efficientdet.efficientdet_model import EfficientDetModel
-from src.models.lstm.lstm_model import LSTMModel
+from data.nexar_dataset import NexarDataModule
+from models.resnet import ResNetModel
+from models.lstm.lstm_model import LSTMModel
+from models.yolo.yolo_model import YOLOModel
+from models.faster_rcnn import FasterRCNNModel
+from configs.model_config import (
+    RESNET_CONFIG,
+    LSTM_CONFIG,
+    YOLO_CONFIG,
+    DATASET_CONFIG,
+    FASTER_RCNN_CONFIG
+)
 
-def train_model(model, data_module, model_name: str):
-    """Train a single model."""
-    # Create checkpoint directory if it doesn't exist
-    checkpoint_dir = os.path.join('checkpoints', model_name)
-    os.makedirs(checkpoint_dir, exist_ok=True)
+def train_model(model_name: str, data_module: NexarDataModule):
+    """Train a specific model."""
+    print(f"\nTraining {model_name} model...")
     
+    # Initialize model based on name
+    if model_name == 'resnet':
+        model = ResNetModel(
+            num_classes=RESNET_CONFIG['num_classes'],
+            pretrained=RESNET_CONFIG['pretrained'],
+            learning_rate=1e-4,
+            weight_decay=1e-5
+        )
+    elif model_name == 'lstm':
+        model = LSTMModel(
+            input_size=LSTM_CONFIG['input_size'],
+            hidden_size=LSTM_CONFIG['hidden_size'],
+            num_layers=LSTM_CONFIG['num_layers'],
+            dropout=LSTM_CONFIG['dropout'],
+            num_classes=2,
+            learning_rate=1e-4,
+        )
+    elif model_name == 'yolo':
+        model = YOLOModel(
+            model_name=YOLO_CONFIG['model_name'],
+            pretrained=YOLO_CONFIG['pretrained'],
+            learning_rate=1e-4,
+            confidence_threshold=0.5
+        )
+    elif model_name == 'fasterrcnn':
+        model = FasterRCNNModel(
+            num_classes=FASTER_RCNN_CONFIG['num_classes'],
+            backbone=FASTER_RCNN_CONFIG['backbone'],
+            pretrained_backbone=FASTER_RCNN_CONFIG['pretrained_backbone'],
+            min_size=FASTER_RCNN_CONFIG['min_size'],
+            max_size=FASTER_RCNN_CONFIG['max_size'],
+            learning_rate=1e-4,
+            weight_decay=1e-5
+        )
+    else:
+        raise ValueError(f"Unknown model: {model_name}")
+
     # Define callbacks
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
-        dirpath=checkpoint_dir,
+        dirpath='checkpoints',
         filename=f'{model_name}-{{epoch:02d}}-{{val_loss:.2f}}',
         save_top_k=3,
         mode='min'
@@ -41,18 +84,29 @@ def train_model(model, data_module, model_name: str):
 
     # Initialize trainer
     trainer = pl.Trainer(
-        max_epochs=1,  # Train for just 1 epoch
+        max_epochs=1,  # Run for just 1 epoch initially
         accelerator='gpu' if torch.cuda.is_available() else 'cpu',
         devices=1,
         callbacks=[checkpoint_callback, early_stopping],
         logger=logger,
-        log_every_n_steps=10
+        log_every_n_steps=10,
+        precision=16 if torch.cuda.is_available() else 32  # Use mixed precision if GPU available
     )
 
     # Train the model
+    print(f"Starting training for {model_name}...")
     trainer.fit(model, data_module)
-    
-    return trainer.checkpoint_callback.best_model_path
+
+    # Test the model
+    print(f"Starting testing for {model_name}...")
+    trainer.test(model, data_module)
+
+    # Save the final model weights
+    weights_dir = os.path.join('checkpoints', 'final_weights')
+    os.makedirs(weights_dir, exist_ok=True)
+    weights_path = os.path.join(weights_dir, f'{model_name}_final_weights.pth')
+    torch.save(model.state_dict(), weights_path)
+    print(f"Final weights saved to: {weights_path}")
 
 def download_yolo_weights():
     """Download YOLOv8 weights if they don't exist."""
@@ -84,40 +138,29 @@ def main():
 
     # Initialize data module
     data_dir = os.path.join('src', 'data', 'raw', 'nexar-collision-prediction')
+    print(f"Using data directory: {data_dir}")
+    
     data_module = NexarDataModule(
         data_dir=data_dir,
-        batch_size=32,
-        num_workers=4
+        batch_size=DATASET_CONFIG['batch_size'],
+        num_workers=DATASET_CONFIG['num_workers']
     )
 
-    try:
-        # Train YOLOv8
-        print("Training YOLOv8...")
-        yolo_model = YOLOModel(model_name="yolov8n.pt")
-        yolo_checkpoint = train_model(yolo_model, data_module, "yolo")
-        print(f"YOLOv8 training completed. Best checkpoint: {yolo_checkpoint}")
-
-        # Train EfficientDet
-        print("\nTraining EfficientDet...")
-        efficientdet_model = EfficientDetModel()
-        efficientdet_checkpoint = train_model(efficientdet_model, data_module, "efficientdet")
-        print(f"EfficientDet training completed. Best checkpoint: {efficientdet_checkpoint}")
-
-        # Train LSTM
-        print("\nTraining LSTM...")
-        lstm_model = LSTMModel()
-        lstm_checkpoint = train_model(lstm_model, data_module, "lstm")
-        print(f"LSTM training completed. Best checkpoint: {lstm_checkpoint}")
-
-        print("\nAll models trained successfully!")
-        print("\nBest checkpoints:")
-        print(f"YOLOv8: {yolo_checkpoint}")
-        print(f"EfficientDet: {efficientdet_checkpoint}")
-        print(f"LSTM: {lstm_checkpoint}")
-
-    except Exception as e:
-        print(f"Error during training: {str(e)}")
-        sys.exit(1)
+    # Train only YOLO, ResNet, and LSTM models
+    models_to_train = ["resnet",'lstm']
+    for model_name in models_to_train:
+        try:
+            print(f"\n{'='*50}")
+            print(f"Starting training for {model_name} model")
+            print(f"{'='*50}")
+            train_model(model_name, data_module)
+            print(f"\n{'='*50}")
+            print(f"Completed training for {model_name} model")
+            print(f"{'='*50}\n")
+        except Exception as e:
+            print(f"Error training {model_name}: {str(e)}")
+            print(f"Skipping {model_name} and continuing with next model...")
+            continue
 
 if __name__ == '__main__':
     main() 

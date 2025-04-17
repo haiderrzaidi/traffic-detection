@@ -22,65 +22,149 @@ wheels/
 
 # Virtual Environment
 venv/
-ENV/
 env/
-.env/
+ENV/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-.DS_Store
-
-# Model checkpoints and weights
-# checkpoints/
-# *.pt
-# *.pth
-# *.weights
-# *.onnx
-# *.engine
-# *.trt
-
-# Dataset files
-src/data/raw/
-*.mp4
-*.avi
-*.mov
-*.mkv
-*.csv
-*.json
-*.xml
-*.zip
-*.tar.gz
-*.tar
-*.gz
-
-# Logs and metrics
-logs/
-runs/
-*.log
-tensorboard/
-wandb/
 
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
 
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.backup
+# Logs
+logs/
+*.log
 
-# Large files
-*.h5
-*.hdf5
-*.npy
-*.npz
-*.pkl
-*.pickle
+# Dataset
+src/data/raw/
+data/raw/
+data/processed/
+data/interim/
+data/external/
 
-# System files
+# Images and Videos - Comprehensive list
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.mkv
+*.webm
+*.m4v
+*.mpg
+*.mpeg
+*.3gp
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.tif
+*.webp
+*.svg
+*.ico
+*.heic
+*.heif
+*.raw
+*.cr2
+*.nef
+*.arw
+*.dng
+*.psd
+*.ai
+*.eps
+*.indd
+*.raw
+*.crw
+*.dng
+*.nef
+*.orf
+*.rw2
+*.srw
+*.x3f
+*.3fr
+*.mef
+*.mos
+*.kdc
+*.dcr
+*.erf
+*.mrw
+*.nrw
+*.pef
+*.raf
+*.rwl
+*.srw
+*.x3f
+
+# Output directories
+output/
+runs/
+temp_frames/
+results/
+detections/
+annotated/
+processed/
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Model Weights and Checkpoints
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.hdf5
+*.pb
+*.onnx
+*.tflite
+*.mlmodel
+*.weights
+*.bin
+*.tar
+*.gz
+*.zip
+runs/train/
+runs/detect/
+runs/val/
+checkpoints/
+weights/
+saved_models/
+model_weights/
+*.weights.h5
+*.weights.pt
+*.weights.pth
+*.weights.ckpt
+*.best.pt
+*.best.pth
+*.best.ckpt
+*.last.pt
+*.last.pth
+*.last.ckpt
+*.final.pt
+*.final.pth
+*.final.ckpt
+*.emergency_save.pt
+*.emergency_save.pth
+*.emergency_save.ckpt
+
+# Project specific
+*.csv
+*.json
+*.yaml
+*.yml
+!requirements.txt
+!setup.py
+!README.md
+!LICENSE
+!*.py
+!*.md
+!*.txt
+!*.sh
+!*.ipynb
+!src/models/

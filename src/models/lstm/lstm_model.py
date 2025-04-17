@@ -1,15 +1,17 @@
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
 from typing import Dict, List, Tuple
 import torchvision.transforms as T
+import torchvision.models as models
 
-class LSTMModel(pl.LightningModule):
+from src.models.base_model import BaseModel
+
+class LSTMModel(BaseModel):
     """LSTM model for analyzing temporal patterns in accident sequences."""
     
     def __init__(
         self,
-        input_size: int = 2048,  # Size of feature vector from backbone
+        input_size: int = 512,  # Size of feature vector from ResNet18
         hidden_size: int = 512,
         num_layers: int = 2,
         num_classes: int = 2,
@@ -17,8 +19,16 @@ class LSTMModel(pl.LightningModule):
         dropout: float = 0.5,
         sequence_length: int = 16
     ):
-        super().__init__()
+        super().__init__(learning_rate=learning_rate)
         self.save_hyperparameters()
+        
+        # CNN feature extractor
+        self.cnn = models.resnet18(pretrained=True)
+        # Remove the last fully connected layer
+        self.cnn = nn.Sequential(*list(self.cnn.children())[:-1])
+        # Freeze CNN parameters
+        for param in self.cnn.parameters():
+            param.requires_grad = False
         
         # LSTM layers
         self.lstm = nn.LSTM(
@@ -38,19 +48,27 @@ class LSTMModel(pl.LightningModule):
             nn.Linear(hidden_size, num_classes)
         )
         
-        self.learning_rate = learning_rate
         self.criterion = nn.CrossEntropyLoss()
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model.
         
         Args:
-            x: Input tensor of shape (batch_size, sequence_length, input_size)
+            x: Input tensor of shape (batch_size, sequence_length, channels, height, width)
         Returns:
             Output tensor of shape (batch_size, num_classes)
         """
+        batch_size, seq_len, channels, height, width = x.shape
+        
+        # Reshape for CNN: (batch_size * sequence_length, channels, height, width)
+        x = x.view(-1, channels, height, width)
+        
+        # Extract features using CNN
+        features = self.cnn(x)
+        features = features.view(batch_size, seq_len, -1)  # (batch_size, sequence_length, feature_size)
+        
         # LSTM forward pass
-        lstm_out, _ = self.lstm(x)
+        lstm_out, _ = self.lstm(features)
         
         # Use the last output for classification
         last_output = lstm_out[:, -1, :]
@@ -88,6 +106,22 @@ class LSTMModel(pl.LightningModule):
         # Log metrics
         self.log('val_loss', loss)
         self.log('val_acc', acc)
+    
+    def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+        """Test step."""
+        sequences, labels = batch
+        outputs = self(sequences)
+        loss = self.criterion(outputs, labels)
+        
+        # Calculate accuracy
+        preds = torch.argmax(outputs, dim=1)
+        acc = (preds == labels).float().mean()
+        
+        # Log metrics
+        self.log('test_loss', loss)
+        self.log('test_acc', acc)
+        
+        return {'test_loss': loss, 'test_acc': acc}
     
     def configure_optimizers(self):
         """Configure optimizers."""

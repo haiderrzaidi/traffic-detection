@@ -19,7 +19,7 @@ class YOLOModel(pl.LightningModule):
         self.save_hyperparameters()
         
         # Load YOLOv8 model
-        self.model = YOLO(model_name)
+        self.model = YOLO(model_name)  # This will automatically download the model if needed
         self.confidence_threshold = confidence_threshold
         self.learning_rate = learning_rate
         
@@ -37,15 +37,44 @@ class YOLOModel(pl.LightningModule):
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step."""
         images, targets = batch
-        loss_dict = self.model.train(images, targets)
-        self.log_dict({f"train_{k}": v for k, v in loss_dict.items()})
-        return loss_dict["loss"]
+        # Ensure images require gradient
+        images = images.requires_grad_()
+        
+        # Convert targets to YOLO format
+        yolo_targets = []
+        for target in targets:
+            if isinstance(target, torch.Tensor) and target.dim() > 0 and target.numel() > 0:
+                yolo_targets.append(target)
+        
+        # Train the model
+        if yolo_targets:  # Only train if we have valid targets
+            results = self.model.train(images, yolo_targets)
+            loss = results.loss
+        else:
+            # If no valid targets, return zero loss
+            loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+        
+        self.log("train_loss", loss)
+        return loss
     
     def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
         """Validation step."""
         images, targets = batch
-        loss_dict = self.model.val(images, targets)
-        self.log_dict({f"val_{k}": v for k, v in loss_dict.items()})
+        # Convert targets to YOLO format
+        yolo_targets = []
+        for target in targets:
+            if isinstance(target, torch.Tensor) and target.dim() > 0 and target.numel() > 0:
+                yolo_targets.append(target)
+        
+        # Validate the model
+        if yolo_targets:  # Only validate if we have valid targets
+            results = self.model.val(images, yolo_targets)
+            loss = results.loss
+        else:
+            # If no valid targets, return zero loss
+            loss = torch.tensor(0.0, device=self.device)
+        
+        self.log("val_loss", loss)
     
     def configure_optimizers(self):
         """Configure optimizers."""
