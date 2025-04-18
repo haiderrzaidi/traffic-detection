@@ -12,7 +12,7 @@ def process_image(
     model: YOLO,
     image_path: str,
     output_dir: str = "results",
-    conf_threshold: float = 0.25,
+    conf_threshold: float = 0.05,
     save_output: bool = True,
     display: bool = False
 ):

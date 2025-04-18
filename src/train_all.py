@@ -108,33 +108,11 @@ def train_model(model_name: str, data_module: NexarDataModule):
     torch.save(model.state_dict(), weights_path)
     print(f"Final weights saved to: {weights_path}")
 
-def download_yolo_weights():
-    """Download YOLOv8 weights if they don't exist."""
-    weights_path = "yolov8n.pt"
-    if not os.path.exists(weights_path):
-        print("Downloading YOLOv8 weights...")
-        url = "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt"
-        response = requests.get(url, stream=True)
-        total_size = int(response.headers.get('content-length', 0))
-        
-        with open(weights_path, 'wb') as f, tqdm(
-            desc=weights_path,
-            total=total_size,
-            unit='iB',
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as bar:
-            for data in response.iter_content(chunk_size=1024):
-                size = f.write(data)
-                bar.update(size)
-        print("Download completed!")
 
 def main():
     # Set random seed for reproducibility
     pl.seed_everything(42)
 
-    # Download YOLOv8 weights if needed
-    download_yolo_weights()
 
     # Initialize data module
     data_dir = os.path.join('src', 'data', 'raw', 'nexar-collision-prediction')

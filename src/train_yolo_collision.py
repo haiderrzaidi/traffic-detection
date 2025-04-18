@@ -11,7 +11,7 @@ def train_yolo_collision(
     weights_path: str = "yolov8n.pt",
     output_dir: str = "runs/train",
     epochs: int = 1,
-    batch_size: int = 16,
+    batch_size: int = 32,
     img_size: int = 640,
     data_fraction: float = 0.3
 ) -> Dict[str, Any]:

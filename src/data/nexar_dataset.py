@@ -1,3 +1,4 @@
+#         sample_size = max(1, min(len(self.df), int(len(self.df) * 0.12))) just change 0.12 to 1.0
 import os
 import cv2
 import numpy as np
